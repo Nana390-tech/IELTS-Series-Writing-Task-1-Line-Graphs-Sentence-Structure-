@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Line Graph Sentence Studio</title>
+<style>
+/* Layout: graph-paper ground; sticky studio bar; one stage at a time, graph pinned beside the tasks on wide screens.
+   Theme: Violet & Saffron (new for this series). */
+:root{
+  --bg:#f2f1f8; --grid:rgba(75,58,168,.08); --card:#ffffff; --ink:#1f1a33; --muted:#5f5a78; --line:#dcd9ec;
+  --head:#3b2d8f; --onhead:#fbf9ff; --cocoa:#3b2d8f;
+  --aqua:#5b3fc4; --onaqua:#ffffff; --aqua-soft:#e9e4fb;
+  --sun:#d99400; --sun-soft:#fdf2d3;
+  --good:#1b7f4c; --good-soft:#dcf3e6; --bad:#b3362c; --bad-soft:#fbe3e0;
+  --c0:#b0413e; --c1:#5b3fc4; --c2:#c98a00; --c3:#2e8b57;
+  --font-display:"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  --font-body:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --font-ar:"Tahoma","Geeza Pro","Noto Naskh Arabic","Segoe UI",sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#14121f; --grid:rgba(160,140,255,.06); --card:#1f1b30; --ink:#efecfa; --muted:#aaa4c6; --line:#36304f;
+  --head:#271d5e; --onhead:#f6f3ff; --cocoa:#c4b6ff;
+  --aqua:#a793ff; --onaqua:#171230; --aqua-soft:#2b2452;
+  --sun:#ffc23d; --sun-soft:#3a2e10;
+  --good:#62d394; --good-soft:#12301f; --bad:#ff8f84; --bad-soft:#3a1a17;
+  --c0:#f08a7e; --c1:#a793ff; --c2:#ffc23d; --c3:#5fd394; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#14121f; --grid:rgba(160,140,255,.06); --card:#1f1b30; --ink:#efecfa; --muted:#aaa4c6; --line:#36304f;
+  --head:#271d5e; --onhead:#f6f3ff; --cocoa:#c4b6ff;
+  --aqua:#a793ff; --onaqua:#171230; --aqua-soft:#2b2452;
+  --sun:#ffc23d; --sun-soft:#3a2e10;
+  --good:#62d394; --good-soft:#12301f; --bad:#ff8f84; --bad-soft:#3a1a17;
+  --c0:#f08a7e; --c1:#a793ff; --c2:#ffc23d; --c3:#5fd394; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{font-size:18px}
+body{margin:0;font-family:var(--font-body);color:var(--ink);line-height:1.6;
+  background-color:var(--bg);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;}
+.ar{direction:rtl;unicode-bidi:isolate;font-family:var(--font-ar);color:var(--muted)}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;line-height:1.25;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* Studio bar */
+header.bar{position:sticky;top:0;z-index:20;background:var(--head);color:var(--onhead);box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.bar-in{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding-block:12px}
+.brand{display:flex;flex-direction:column;min-width:0;flex:1 1 260px}
+.brand h1{font-size:1.35rem;letter-spacing:.01em}
+.brand small{opacity:.85;font-size:.82rem}
+.brand .ar{color:var(--onhead);opacity:.9}
+@media (max-width:700px){ header.bar{position:static} .tools .tbtn{font-size:.76rem;padding:5px 9px} }
+.meter{display:flex;align-items:center;gap:10px;flex:1 1 260px}
+.track{flex:1;height:12px;border-radius:99px;background:rgba(255,255,255,.18);overflow:hidden}
+.fill{height:100%;width:0;background:linear-gradient(90deg,var(--aqua),var(--sun));transition:width .4s}
+.pts{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;background:rgba(255,255,255,.14);padding:4px 12px;border-radius:99px;font-size:.9rem}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.tbtn{background:transparent;border:1.5px solid rgba(255,255,255,.5);color:var(--onhead);border-radius:10px;padding:6px 12px;font-size:.82rem;font-weight:600}
+.tbtn:hover{background:rgba(255,255,255,.12)}
+
+/* Stage nav */
+nav.stages{display:flex;gap:8px;overflow-x:auto;padding-block:14px 6px;scrollbar-width:thin}
+.chip{flex:0 0 auto;display:flex;align-items:center;gap:8px;border:2px solid var(--line);background:var(--card);border-radius:12px;padding:8px 12px;font-weight:600;font-size:.85rem;color:var(--ink)}
+.chip .n{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--aqua-soft);color:var(--aqua);font-weight:800;font-size:.8rem}
+.chip.on{border-color:var(--aqua);box-shadow:0 0 0 3px var(--aqua-soft)}
+.chip.done .n{background:var(--good);color:var(--card)}
+
+main{padding-block:10px 40px}
+.stage{display:none}
+.stage.on{display:block;animation:rise .35s ease}
+@keyframes rise{from{transform:translateY(8px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.stage.on{animation:none}.fill{transition:none}}
+
+.intro{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:16px}
+.eyebrow{text-transform:uppercase;letter-spacing:.12em;font-size:.72rem;font-weight:800;color:var(--aqua)}
+.intro h2{font-size:1.6rem;color:var(--cocoa);margin:4px 0 6px}
+.intro p{margin:4px 0;max-width:70ch}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+@media (min-width:980px){ .layout.two{grid-template-columns:minmax(0,430px) minmax(0,1fr)} .layout.two .graphside{position:sticky;top:96px;align-self:start} }
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;min-width:0}
+.card + .card{margin-top:0}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* graph */
+.gcard h3{font-size:1rem;margin-bottom:6px;color:var(--ink)}
+.gcard .task{font-size:.86rem;color:var(--muted);margin:0 0 8px}
+.gsvg{width:100%;height:auto;display:block}
+.gsvg text{fill:var(--muted);font-family:var(--font-body)}
+.gsvg .axis{stroke:var(--muted);stroke-width:1.2}
+.gsvg .gl{stroke:var(--line);stroke-width:1}
+.gsvg .ln{fill:none;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.gsvg .vl{font-size:11px;font-weight:700}
+.s0{stroke:var(--c0);fill:var(--c0)} .s1{stroke:var(--c1);fill:var(--c1)} .s2{stroke:var(--c2);fill:var(--c2)} .s3{stroke:var(--c3);fill:var(--c3)}
+.ln.s0,.ln.s1,.ln.s2,.ln.s3{fill:none}
+.gsvg text.s0{fill:var(--c0)} .gsvg text.s1{fill:var(--c1)} .gsvg text.s2{fill:var(--c2)} .gsvg text.s3{fill:var(--c3)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend svg{width:30px;height:14px}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted);margin-top:8px}
+
+/* items */
+.item{border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--card);min-width:0}
+.item.ok{border-color:var(--good);background:linear-gradient(0deg,var(--good-soft),var(--card) 70%)}
+.item h4{margin:0 0 8px;font-size:1rem;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.qn{font-family:var(--font-display);color:var(--aqua);font-weight:800}
+.say{margin:0 0 10px}
+.mini{width:100%;max-width:300px;height:auto;display:block;margin:4px 0 10px}
+.builder{display:flex;flex-wrap:wrap;align-items:center;gap:8px;line-height:2.1}
+.builder select,.builder input{border:2px solid var(--line);background:var(--bg);border-radius:9px;padding:4px 8px;max-width:100%}
+.builder input[type=number]{width:4.6em}
+.builder select:focus,.builder input:focus{border-color:var(--aqua)}
+.preview{margin-top:10px;padding:10px 14px;border-radius:10px;background:var(--aqua-soft);font-weight:600;font-size:1.02rem}
+.preview .lbl{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--aqua);font-weight:800}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.btn{border:none;border-radius:10px;padding:9px 16px;font-weight:700;background:var(--aqua);color:var(--onaqua)}
+.btn:hover{filter:brightness(1.07)}
+.btn.ghost{background:transparent;color:var(--aqua);border:2px solid var(--aqua)}
+.btn.sun{background:var(--sun);color:#2a1c18}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.fb{margin-top:8px;font-size:.92rem;border-radius:10px;padding:0}
+.fb:not(:empty){padding:8px 12px}
+.fb.good{background:var(--good-soft);color:var(--good)}
+.fb.bad{background:var(--bad-soft);color:var(--bad)}
+.fb.tip{background:var(--sun-soft);color:var(--ink)}
+.fb ul{margin:4px 0 0;padding-left:20px}
+
+/* word bank */
+.bank{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.word{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--bg);min-width:0}
+.word b{display:block}
+.word .ar{font-size:.9rem}
+.tag{display:inline-block;font-size:.68rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:99px;margin-bottom:6px}
+.tag.up{background:var(--good-soft);color:var(--good)} .tag.down{background:var(--bad-soft);color:var(--bad)} .tag.how{background:var(--sun-soft);color:var(--ink)}
+.pattern{font-family:var(--font-display);font-size:1rem;padding:10px 12px;border-left:5px solid var(--aqua);background:var(--bg);border-radius:0 10px 10px 0;margin:8px 0}
+.pattern em{font-style:normal;color:var(--aqua);font-weight:700}
+
+/* gap fill */
+.gap select{border:2px solid var(--aqua);border-radius:8px;padding:2px 6px;background:var(--bg);font-weight:700}
+.gap .line{margin:0}
+.gap.ok select{border-color:var(--good)} .gap.no select{border-color:var(--bad)}
+
+textarea{width:100%;min-height:90px;border:2px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);resize:vertical;line-height:1.55}
+textarea:focus{border-color:var(--aqua)}
+textarea.big{min-height:300px}
+.src{font-weight:600;padding:8px 12px;background:var(--bg);border-radius:10px;border:1px dashed var(--line);margin:0 0 8px}
+.model{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--sun-soft);font-size:.95rem}
+.model b{color:var(--cocoa)}
+
+/* mcq */
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.opt{border:2px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 14px;font-weight:600}
+.opt:hover{border-color:var(--aqua)}
+.opt.right{border-color:var(--good);background:var(--good-soft);color:var(--good)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft);color:var(--bad)}
+
+/* tiles */
+.answer-zone{min-height:52px;border:2px dashed var(--aqua);border-radius:10px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;background:var(--aqua-soft)}
+.pool{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tile{border:1.5px solid var(--line);background:var(--card);border-radius:8px;padding:6px 10px;font-weight:600;box-shadow:0 2px 0 var(--line)}
+.tile:hover{border-color:var(--aqua)}
+
+/* checklist */
+.checks{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:4px;font-size:.88rem}
+.checks li{display:flex;gap:8px;align-items:flex-start}
+.checks .d{flex:0 0 20px;height:20px;border-radius:50%;display:inline-grid;place-items:center;font-size:.75rem;font-weight:800;background:var(--line);color:var(--muted)}
+.checks li.yes .d{background:var(--good);color:var(--card)}
+.wc{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.hints{margin-top:6px;display:grid;gap:6px}
+.hint{background:var(--sun-soft);border-radius:10px;padding:8px 12px;font-size:.92rem}
+.para-label{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+
+.timer{font-family:var(--font-display);font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;color:var(--cocoa)}
+.timer.low{color:var(--bad)}
+.selfcheck label{display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:.94rem}
+.selfcheck input{margin-top:5px;width:18px;height:18px;accent-color:var(--aqua)}
+
+/* results */
+.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.score{border:1.5px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}
+.score b{display:block;font-size:1.6rem;font-family:var(--font-display);color:var(--aqua);font-variant-numeric:tabular-nums}
+.score span{font-size:.82rem;color:var(--muted)}
+.cert{border:6px double var(--cocoa);border-radius:16px;padding:28px 20px;text-align:center;background:var(--card);position:relative}
+.cert h2{font-size:2rem;color:var(--cocoa)}
+.cert .who{font-family:var(--font-display);font-size:1.8rem;color:var(--aqua);border-bottom:2px solid var(--line);display:inline-block;padding:0 20px 4px;margin:10px 0}
+.locked{opacity:.55}
+.name-in{border:2px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--bg);width:100%;max-width:360px}
+
+/* opening animation */
+.anim{padding:18px 20px}
+.anim-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.yr{font-family:var(--font-display);font-size:2.6rem;font-weight:800;color:var(--aqua);font-variant-numeric:tabular-nums;line-height:1}
+.yr small{display:block;font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.anim .gsvg .hl{font-size:13px;font-weight:800}
+.cap{margin-top:12px;min-height:3.4em;display:block;font-size:1.25rem;background:var(--aqua-soft);border-radius:12px;padding:10px 16px;transition:opacity .25s}
+.cap em{font-style:normal;color:var(--aqua);font-weight:800;border-bottom:3px solid var(--sun)}
+.phr{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.ph{border:2px solid var(--line);border-radius:99px;padding:5px 12px;font-size:.88rem;font-weight:700;background:var(--card);transition:all .3s}
+.ph .ar{font-size:.85rem;margin-left:6px}
+.ph.lit{background:var(--sun);border-color:var(--sun);color:#1f1a33;transform:scale(1.06)}
+.ph.lit .ar{color:#1f1a33}
+.ring{fill:none;stroke:var(--sun);stroke-width:3}
+.ring.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.7);opacity:1}100%{transform:scale(2.2);opacity:0}}
+@media (prefers-reduced-motion:reduce){.ring.pulse{animation:none}.ph,.cap{transition:none}}
+footer{text-align:center;padding-block:20px 30px;color:var(--muted);font-size:.88rem}
+footer b{color:var(--cocoa)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:12px;font-weight:600;z-index:60;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+#printArea{display:none}
+@media print{
+  body{background:#fff;color:#000}
+  body > *:not(#printArea){display:none !important}
+  #printArea{display:block;font-family:Georgia,serif;color:#000;font-size:12pt}
+  #printArea h1{font-size:18pt} #printArea h2{font-size:14pt;margin-top:16pt;border-bottom:1px solid #999}
+  #printArea .p{white-space:pre-wrap;border:1px solid #ccc;padding:8pt;border-radius:6pt;margin:6pt 0}
+  #printArea .pcert{border:6px double #3b2d8f;padding:40pt;text-align:center;margin-top:60pt}
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap bar-in">
+    <div class="brand">
+      <h1>Line Graph Sentence Studio</h1>
+      <small>IELTS Writing Task 1 · from one sentence to a full report · <span class="ar">من جملة واحدة إلى تقرير كامل</span></small>
+    </div>
+    <div class="meter">
+      <div class="track" aria-label="Progress"><div class="fill" id="fill"></div></div>
+      <span class="pts" id="pts">0 pts</span>
+    </div>
+    <div class="tools">
+      <button class="tbtn" id="saveJson" type="button">Save progress</button>
+      <button class="tbtn" id="loadJson" type="button">Load progress</button>
+      <button class="tbtn" id="pdfBtn" type="button">Save my work as PDF</button>
+      <input type="file" id="fileIn" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="stages" id="nav" aria-label="Stages"></nav>
+</div>
+
+<main class="wrap" id="main"></main>
+
+<footer class="wrap">Designed by: <b>Nazila Motahari</b> · Line Graph Sentence Studio · companion to the Line Graph Script Builder</footer>
+
+<canvas id="confetti"></canvas>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="printArea"></div>
+
+<script>
+/* ===================== DATA ===================== */
+const GA = {
+  id:'A',
+  title:'Methods of reading used by university students, 2004–2024',
+  task:'The graph below shows the percentage of university students in one country who used four different methods of reading at least once a week between 2004 and 2024.',
+  years:[2004,2008,2012,2016,2020,2024],
+  max:80, step:10, unit:'%', yLabel:'% of students',
+  series:[
+    {name:'Printed books', ar:'الكتب المطبوعة', v:[72,68,60,49,40,35]},
+    {name:'E-books', ar:'الكتب الإلكترونية', v:[5,12,28,41,52,58]},
+    {name:'Audiobooks', ar:'الكتب الصوتية', v:[3,4,6,10,21,33]},
+    {name:'Library visits', ar:'زيارات المكتبة', v:[30,35,31,34,22,26]}
+  ]
+};
+const GB = {
+  id:'B',
+  title:'Payment methods used in shops, 2004–2024',
+  task:'The graph below shows the percentage of shop purchases in one country that were paid for using four different methods between 2004 and 2024.',
+  years:[2004,2008,2012,2016,2020,2024],
+  max:70, step:10, unit:'%', yLabel:'% of purchases',
+  series:[
+    {name:'Cash', ar:'نقداً', v:[65,58,47,33,20,14]},
+    {name:'Bank card', ar:'البطاقة البنكية', v:[25,32,41,46,44,38]},
+    {name:'Mobile phone', ar:'الهاتف المحمول', v:[0,2,6,15,31,45]},
+    {name:'Cheque', ar:'الشيك', v:[10,8,6,6,5,3]}
+  ]
+};
+
+const GC = {
+  id:'C',
+  title:'What graduates did after college, 2004–2024',
+  task:'The graph below shows the percentage of college graduates in one country who found work, continued their education, started their own business, or were neither working nor studying in the year after graduating, between 2004 and 2024.',
+  years:[2004,2008,2012,2016,2020,2024],
+  max:70, step:10, unit:'%', yLabel:'% of graduates',
+  series:[
+    {name:'Found work', ar:'وجدوا عملاً', v:[55,57,60,52,44,40]},
+    {name:'Continued education', ar:'واصلوا تعليمهم', v:[20,22,24,30,38,46]},
+    {name:'Started a business', ar:'بدأوا مشروعاً خاصاً', v:[3,4,5,8,12,12]},
+    {name:'Neither working nor studying', ar:'لا يعملون ولا يدرسون', v:[22,17,11,10,6,2]}
+  ]
+};
+const GRAPHS={A:GA,B:GB,C:GC};
+
+const STAGES = [
+  {id:'go', n:'▶', short:'Watch the graph', title:'Watch the graph tell its story', ar:'شاهد الرسم البياني يحكي قصته'},
+  {id:'s1', n:1, short:'Trend sentences', title:'Build a trend sentence', ar:'ابنِ جملة تصف الاتجاه'},
+  {id:'s2', n:2, short:'Numbers & time', title:'Add numbers and time correctly', ar:'أضف الأرقام والزمن بشكل صحيح'},
+  {id:'s3', n:3, short:'Verb ⇄ noun', title:'Say it two ways', ar:'قلها بطريقتين: فعل أو اسم'},
+  {id:'s4', n:4, short:'Compare', title:'Compare and contrast the lines', ar:'قارن بين الخطوط'},
+  {id:'s5', n:5, short:'Key features', title:'Peaks, lows and crossovers', ar:'القمم والقيعان ونقاط التقاطع'},
+  {id:'s6', n:6, short:'Paragraphs', title:'Build the four paragraphs', ar:'ابنِ الفقرات الأربع'},
+  {id:'s7', n:7, short:'Full report', title:'Write the full report on your own', ar:'اكتب التقرير كاملاً بمفردك'},
+  {id:'res', n:'★', short:'Results', title:'My results and certificate', ar:'نتائجي والشهادة'}
+];
+
+/* Stage 1 */
+const SUBJ_A = ['The percentage of students reading printed books','The percentage of students using e-books','The percentage of students listening to audiobooks','The percentage of students visiting libraries'];
+const ACT_B = ['reading printed books','using e-books','listening to audiobooks','visiting libraries'];
+const VERBS = {up:['rose','increased','grew','climbed'], down:['fell','decreased','dropped','declined']};
+const ADVS = ['sharply','dramatically','significantly','considerably','steadily','gradually','slightly','marginally'];
+const ADJS = ['sharp','dramatic','significant','considerable','rapid','steady','gradual','slight','small'];
+const NOUNS = {up:['rise','increase'], down:['fall','decrease','decline','drop']};
+const S1 = [
+  {p:'A', s:1, i0:1, i1:3, dir:'up',   ok:['sharply','dramatically','significantly','considerably']},
+  {p:'A', s:2, i0:0, i1:2, dir:'up',   ok:['slightly','gradually','marginally']},
+  {p:'A', s:3, i0:3, i1:4, dir:'down', ok:['sharply','dramatically','significantly','considerably']},
+  {p:'B', s:0, i0:0, i1:1, dir:'down', ok:['slight','small','gradual']},
+  {p:'B', s:2, i0:3, i1:5, dir:'up',   ok:['sharp','dramatic','significant','considerable','rapid']},
+  {p:'B', s:1, i0:4, i1:5, dir:'up',   ok:['slight','small','gradual','steady']}
+];
+const BANK = [
+  ['up','rose','ارتفع'],['up','increased','زاد'],['up','grew','نما'],['up','climbed','صعد'],
+  ['down','fell','انخفض'],['down','decreased','تناقص'],['down','dropped','هبط'],['down','declined','تراجع'],
+  ['how','sharply / sharp','بشكل حاد / حاد'],['how','dramatically / dramatic','بشكل كبير جداً'],['how','significantly / significant','بشكل ملحوظ'],['how','considerably / considerable','بشكل كبير'],
+  ['how','rapidly / rapid','بسرعة / سريع'],['how','steadily / steady','بثبات / ثابت'],['how','gradually / gradual','تدريجياً / تدريجي'],['how','slightly / slight','قليلاً / طفيف']
+];
+
+/* Stage 2 */
+const PREPS = ['to','by','at','of','from','in','between','over'];
+const S2 = [
+  ['E-book use rose from 12% ','to',' 41% between 2008 and 2016.'],
+  ['Printed book reading fell ','by',' 37 percentage points over the twenty years.'],
+  ['E-book use reached a peak ','of',' 58% in 2024.'],
+  ['Library visits stood ','at',' 30% in 2004.'],
+  ['There was a sharp drop ','in',' library visits in 2020.'],
+  ['Audiobook listening grew rapidly ','between',' 2016 and 2024.'],
+  ['Printed book reading declined steadily ','over',' the period.'],
+  ['','In',' 2004, only 3% of students listened to audiobooks.'],
+  ['Library visits fluctuated ','between',' 30% and 35% until 2016.'],
+  ['Audiobook listening increased ','by',' 30 percentage points in total.']
+];
+const PREP_TIPS = {
+  to:'"from X to Y" shows the start and end figure.',
+  by:'"by" shows the size of the change (the difference).',
+  at:'"stood at / remained at" + a figure.',
+  of:'"a peak of / a low of" + a figure.',
+  in:'"a rise/drop in" + the thing that changed; "in" + a single year.',
+  between:'"between" + two years or two figures.',
+  over:'"over the period" = during the whole time.'
+};
+
+/* Stage 3 */
+const S3 = [
+  {src:'E-book use rose sharply between 2008 and 2016.', ask:'Rewrite with a NOUN. Start with: There was a …',
+   g:[[/^there was a\b/,'Start with "There was a".'],[/\bsharp\b/,'Change the adverb "sharply" to the adjective "sharp".'],[/\b(rise|increase)\b/,'Change the verb "rose" to the noun "rise" or "increase".'],[/\bin e-?book/,'Use "in e-book use" after the noun.'],[/2008/,'Keep the years.'],[/2016/,'Keep the years.']],
+   model:'There was a sharp rise in e-book use between 2008 and 2016.'},
+  {src:'Library visits fell dramatically between 2016 and 2020.', ask:'Rewrite with a NOUN. Start with: There was a …',
+   g:[[/^there was a\b/,'Start with "There was a".'],[/\bdramatic\b/,'Use the adjective "dramatic", not the adverb.'],[/\b(fall|drop|decrease|decline)\b/,'Change "fell" to a noun: fall, drop, decrease or decline.'],[/\bin library/,'Use "in library visits" after the noun.'],[/2016/,'Keep the years.'],[/2020/,'Keep the years.']],
+   model:'There was a dramatic fall in library visits between 2016 and 2020.'},
+  {src:'There was a gradual decline in printed book reading over the period.', ask:'Rewrite with a VERB. Start with: Printed book reading …',
+   g:[[/^printed book reading\b/,'Start with "Printed book reading".'],[/\b(declined|fell|decreased|dropped)\b/,'Use a past-tense verb: declined, fell, decreased or dropped.'],[/\bgradually\b/,'Change the adjective "gradual" to the adverb "gradually".'],[/over the period/,'Keep "over the period".'],[/^(?!.*there was)/,'Do not use "There was" this time.']],
+   model:'Printed book reading declined gradually over the period.'},
+  {src:'There was a slight increase in audiobook listening between 2004 and 2012.', ask:'Rewrite with a VERB. Start with: Audiobook listening …',
+   g:[[/^audiobook listening\b/,'Start with "Audiobook listening".'],[/\b(increased|rose|grew|climbed)\b/,'Use a past-tense verb: increased, rose or grew.'],[/\bslightly\b/,'Change "slight" to the adverb "slightly".'],[/2004/,'Keep the years.'],[/2012/,'Keep the years.']],
+   model:'Audiobook listening increased slightly between 2004 and 2012.'},
+  {src:'E-book use grew steadily between 2016 and 2024.', ask:'Rewrite with a NOUN. Start with: There was a …',
+   g:[[/^there was a\b/,'Start with "There was a".'],[/\bsteady\b/,'Change "steadily" to the adjective "steady".'],[/\b(rise|increase|growth)\b/,'Change "grew" to a noun: rise, increase or growth.'],[/\bin e-?book/,'Use "in e-book use" after the noun.'],[/2016/,'Keep the years.'],[/2024/,'Keep the years.']],
+   model:'There was a steady rise in e-book use between 2016 and 2024.'},
+  {src:'There was a significant drop in the percentage of students reading printed books between 2012 and 2016.', ask:'Rewrite with a VERB. Start with: The percentage of students reading printed books …',
+   g:[[/^the percentage of students reading printed books\b/,'Start with "The percentage of students reading printed books".'],[/\b(dropped|fell|decreased|declined)\b/,'Use a past-tense verb: dropped, fell, decreased or declined.'],[/\bsignificantly\b/,'Change "significant" to "significantly".'],[/2012/,'Keep the years.'],[/2016/,'Keep the years.']],
+   model:'The percentage of students reading printed books dropped significantly between 2012 and 2016.'}
+];
+
+/* Stage 4 */
+const LINKERS = [
+  ['contrast','whereas','بينما'],['contrast','while','في حين'],['contrast','in contrast','على النقيض'],['contrast','however','ومع ذلك'],['contrast','on the other hand','من ناحية أخرى'],
+  ['same','similarly','بالمثل'],['same','likewise','كذلك'],['same','also','أيضاً'],['same','both … and','كلٌّ من … و']
+];
+const S4 = [
+  {pre:'E-book use rose sharply. ', post:', printed book reading fell steadily.', ans:'In contrast', opts:['In contrast','Similarly','Because of this'], why:'One line goes up and the other goes down, so we need a contrast word.'},
+  {pre:'Audiobook listening grew quickly after 2016. ', post:', e-book use continued to rise.', ans:'Similarly', opts:['Similarly','However','Although'], why:'Both lines rise, so we show a similarity.'},
+  {pre:'', post:' printed books lost readers, e-books gained them.', ans:'While', opts:['While','Similarly','Despite'], why:'"While" joins two opposite ideas in ONE sentence.'},
+  {pre:'Library visits went up and down until 2016, ', post:' e-book use rose in every period.', ans:'whereas', opts:['whereas','so','likewise'], why:'"whereas" joins two different trends in one sentence.'},
+  {pre:'Both e-books and audiobooks became more popular; ', post:', the rise in e-books was much larger.', ans:'however', opts:['however','similarly','therefore'], why:'Both rose, but the sizes are different, so we use "however".'},
+  {pre:'Printed book reading fell in most periods. Library visits ', post:' dropped, especially in 2020.', ans:'also', opts:['also','but','whereas'], why:'Two lines both fell, so "also" adds a similar fact.'}
+];
+const S4W = [
+  {ask:'Write ONE sentence comparing printed books and e-books in 2024. Use a contrast word (whereas, while, in contrast, however…).',
+   checks:[['Uses a contrast word',/\b(whereas|while|in contrast|however|on the other hand|by contrast|but)\b/],['Mentions printed books',/printed/],['Mentions e-books',/e-?book/],['Gives both figures (35% and 58%)',/35\s*%[\s\S]*58\s*%|58\s*%[\s\S]*35\s*%/]],
+   model:'In 2024, 58% of students used e-books, whereas only 35% read printed books.'},
+  {ask:'Write one or two sentences showing that e-books AND audiobooks both grew. Use a similarity word (similarly, likewise, also, both…).',
+   checks:[['Uses a similarity word',/\b(similarly|likewise|also|both|as well)\b/],['Mentions e-books',/e-?book/],['Mentions audiobooks',/audio/],['Includes at least two figures',/\d+\s*%[\s\S]*\d+\s*%/]],
+   model:'E-book use rose from 5% to 58% over the period. Similarly, audiobook listening grew from 3% to 33%.'}
+];
+
+/* Stage 5 */
+const S5 = [
+  {c:['E-books','overtook','printed books','between 2016','and 2020.'], ar:'تجاوزت', tip:'overtook = went higher than another line'},
+  {c:['E-book use','reached','a peak','of 58%','in 2024.'], ar:'بلغ الذروة', tip:'reached a peak of = its highest point'},
+  {c:['Library visits','fluctuated','between 30%','and 35%','until 2016.'], ar:'تذبذب', tip:'fluctuated = went up and down'},
+  {c:['In 2004,','audiobooks were','the least popular','method','at just 3%.'], ar:'الأقل شيوعاً', tip:'the least popular = the lowest line'},
+  {c:['Printed books','remained','the most','popular method','until 2016.'], ar:'ظلّ', tip:'remained = stayed (the same position)'},
+  {c:['After 2016,','there was','a sharp drop','in library visits','to 22%.'], ar:'انخفاض حاد', tip:'a sharp drop = a big, fast fall'}
+];
+
+/* Stage 6 */
+const S6 = [
+  {k:'intro', label:'Introduction', ar:'المقدمة', min:20,
+   hints:['Begin with "The line graph illustrates / shows / compares…". Do NOT copy the question; change the words.',
+          'Paraphrase: "percentage of college graduates" → "proportion of college graduates"; "in the year after graduating" → "after finishing their studies".',
+          'Finish with the place and time: "… in one country over a twenty-year period from 2004 to 2024."'],
+   checks:[['Uses a reporting verb (illustrates, shows, compares…)',t=>/\b(illustrates|shows|compares|presents|gives information|depicts)\b/.test(t)],['Includes 2004 and 2024',t=>/2004/.test(t)&&/2024/.test(t)],['Does not copy "the graph below"',t=>t.length>0&&!/below/.test(t)],['20 words or more',t=>wc(t)>=20]]},
+  {k:'over', label:'Overview', ar:'النظرة العامة', min:20,
+   hints:['Start with "Overall," and describe the BIG picture only: no numbers.',
+          'Feature 1: what happened to continuing education compared with finding work?',
+          'Feature 2: which choice was the most common at the end, and what happened to graduates doing neither? Try "…further study overtook employment…".'],
+   checks:[['Starts with "Overall" or "In general"',t=>/^(overall|in general)\b/.test(t)],['No numbers in the overview',t=>t.length>0&&!/\d/.test(t)],['Mentions two main features (two sentences)',t=>(t.match(/[.!?](\s|$)/g)||[]).length>=2],['20 words or more',t=>wc(t)>=20]]},
+  {k:'b1', label:'Body paragraph 1: found work and continued education', ar:'الفقرة الأولى', min:40,
+   hints:['Group the two biggest lines: found work and continued education. They cross near the end.',
+          'Found work: start (55%), the peak of 60% in 2012, then the decline to 40%. Try "rose slightly to a peak of…, but then…".',
+          'Continued education: a steady rise from 20% to 46%. Link with "In contrast," and say when it overtook finding work.'],
+   checks:[['At least two figures with %',t=>(t.match(/\d+\s*%/g)||[]).length>=2],['Uses trend language',t=>/\b(rose|increased|fell|declined|dropped|decreased|grew|fluctuated|reached|peak|remained|overtook|rise|fall|drop|decline|increase)\b/.test(t)],['Uses a linking word',t=>/\b(however|while|whereas|in contrast|similarly|after that|then|by contrast|also|followed by|on the other hand)\b/.test(t)],['40 words or more',t=>wc(t)>=40]]},
+  {k:'b2', label:'Body paragraph 2: started a business and neither', ar:'الفقرة الثانية', min:40,
+   hints:['Group the two smaller lines: started a business and neither working nor studying. You could start with "Turning to the smaller groups, …".',
+          'Started a business: a gradual rise from 3% to 12% in 2020, then it "remained stable".',
+          'Neither working nor studying: a steady fall from 22% to just 2%. Link with "On the other hand,".'],
+   checks:[['At least two figures with %',t=>(t.match(/\d+\s*%/g)||[]).length>=2],['Uses trend language',t=>/\b(rose|increased|fell|declined|dropped|decreased|grew|fluctuated|reached|peak|remained|overtook|rise|fall|drop|decline|increase)\b/.test(t)],['Uses a linking word',t=>/\b(however|while|whereas|in contrast|similarly|likewise|after that|then|by contrast|also|followed by|turning to)\b/.test(t)],['40 words or more',t=>wc(t)>=40]]}
+];
+
+const MODEL_C = [
+ 'The line graph illustrates the proportion of college graduates in one country who found work, went on to further study, started a business or were neither working nor studying in the year after graduating, over the twenty years from 2004 to 2024.',
+ 'Overall, continuing education became much more popular, while the share of graduates who found work fell in the second half of the period. The most noticeable change was that further study overtook employment to become the most common choice by the end of the period.',
+ 'In 2004, finding work was by far the most common outcome, at 55%. This figure rose slightly to a peak of 60% in 2012, but it then declined steadily to 40% in 2024. In contrast, the percentage of graduates who continued their education grew in every period, from 20% to 46%. As a result, further study overtook employment between 2020 and 2024.',
+ 'Turning to the smaller groups, only 3% of graduates started their own business in 2004. This figure increased gradually to 12% in 2020 and then remained stable. On the other hand, the proportion who were neither working nor studying fell steadily throughout the period, from 22% to just 2%.'
+];
+
+/* Stage 7 */
+const SELF7 = [
+  'My introduction paraphrases the question (I did not copy it).',
+  'My overview starts with "Overall," and has no numbers.',
+  'I grouped the lines that fell and the lines that rose.',
+  'I used both patterns: "X rose sharply" and "There was a sharp rise in X".',
+  'I used "from … to …", "by", "a peak of" or "between" correctly.',
+  'I mentioned when lines overtook each other.',
+  'I used linking words (whereas, in contrast, similarly…).',
+  'I used the past tense for all past years.'
+];
+const MODEL_B = [
+ 'The line graph compares the proportion of shop purchases in one country that were paid for by cash, bank card, mobile phone and cheque over the twenty years from 2004 to 2024.',
+ 'Overall, cash and cheques became less common, while mobile phone payments rose dramatically. By the end of the period, paying by phone had become the most popular method.',
+ 'In 2004, cash was used for almost two thirds of purchases (65%). This figure then fell sharply and continuously, reaching only 14% in 2024. Cheques were the least common method throughout the period, and their share declined gradually from 10% to just 3%.',
+ 'Bank cards, on the other hand, rose steadily from 25% to a peak of 46% in 2016, overtaking cash between 2012 and 2016. After that, however, card use fell to 38%. Mobile phone payments showed the most dramatic change. They were not used at all in 2004, but they grew rapidly after 2012 and reached 45% in 2024, overtaking both cash and bank cards.'
+];
+
+/* ===================== STATE ===================== */
+let state = freshState();
+function freshState(){ return {v:1, name:'', stage:'go', items:{}, tries:{}, b:{}, g2:{}, t:{}, h:{}, ck7:[], s5:{}, model6:false, fin7:false, timeLeft:1200, showVals:true, order:{}}; }
+
+/* ===================== HELPERS ===================== */
+const $ = s=>document.querySelector(s);
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function norm(s){return String(s||'').toLowerCase().replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/\s+/g,' ').trim();}
+function wc(s){const m=String(s||'').trim().match(/\S+/g);return m?m.length:0;}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function getOrder(key,arr){ if(!state.order[key]||state.order[key].length!==arr.length){ state.order[key]=shuffle(arr.map((_,i)=>i)); } return state.order[key].map(i=>arr[i]); }
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2200);}
+function record(id, ok){
+  state.tries[id]=(state.tries[id]||0)+1;
+  if(ok && state.items[id]==null){
+    const first = state.tries[id]===1;
+    state.items[id] = first?1:0.5;
+    toast(first?'Correct first time! +10 points':'Correct! +5 points');
+    updateTop();
+    const st=id.split('-')[0]; if(stageDone(st)){ setTimeout(()=>{confetti();toast('Stage complete! Well done.');},400); }
+  }
+}
+const ITEM_IDS = {
+  s1:S1.map((_,i)=>'s1-'+i), s2:S2.map((_,i)=>'s2-'+i), s3:S3.map((_,i)=>'s3-'+i),
+  s4:S4.map((_,i)=>'s4-'+i).concat(S4W.map((_,i)=>'s4-w'+i)), s5:S5.map((_,i)=>'s5-'+i)
+};
+function stageScore(st){const ids=ITEM_IDS[st];let s=0;ids.forEach(id=>s+=(state.items[id]||0));return {s, max:ids.length};}
+function s6done(){return S6.every(p=>wc(state.t['s6-'+p.k])>=p.min);}
+function stageDone(st){
+  if(ITEM_IDS[st]) return ITEM_IDS[st].every(id=>state.items[id]!=null);
+  if(st==='s6') return s6done();
+  if(st==='s7') return !!state.fin7;
+  return false;
+}
+function totals(){let s=0,m=0;['s1','s2','s3','s4','s5'].forEach(st=>{const r=stageScore(st);s+=r.s;m+=r.max;});return {s,m,pct:Math.round(s/m*100)};}
+function points(){let p=0;Object.values(state.items).forEach(v=>p+=v*10); if(s6done())p+=40; if(state.fin7)p+=60; return p;}
+function updateTop(){
+  const done=STAGES.filter(s=>s.id!=='res'&&s.id!=='go'&&stageDone(s.id)).length;
+  $('#fill').style.width=(done/7*100)+'%';
+  $('#pts').textContent=points()+' pts';
+  renderNav();
+}
+
+/* ===================== GRAPHS ===================== */
+const MARK=['circle','square','triangle','diamond'];
+function marker(shape,x,y,cls,r=4.5){
+  if(shape==='circle')return `<circle class="${cls}" cx="${x}" cy="${y}" r="${r}"/>`;
+  if(shape==='square')return `<rect class="${cls}" x="${x-r}" y="${y-r}" width="${2*r}" height="${2*r}"/>`;
+  if(shape==='triangle')return `<polygon class="${cls}" points="${x},${y-r-1} ${x+r+1},${y+r} ${x-r-1},${y+r}"/>`;
+  return `<polygon class="${cls}" points="${x},${y-r-1.5} ${x+r+1.5},${y} ${x},${y+r+1.5} ${x-r-1.5},${y}"/>`;
+}
+function graphSVG(G, opts={}){
+  const W=660,H=400,L=64,R=26,T=22,B=56,pw=W-L-R,ph=H-T-B,n=G.years.length;
+  const X=i=>L+i*(pw/(n-1)), Y=v=>T+ph-(v/G.max)*ph;
+  let s=`<svg class="gsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(G.title)}">`;
+  for(let v=0;v<=G.max;v+=G.step){ s+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-10}" y="${Y(v)+4}" text-anchor="end" font-size="13">${v}</text>`; }
+  s+=`<line class="axis" x1="${L}" y1="${T}" x2="${L}" y2="${T+ph}"/><line class="axis" x1="${L}" y1="${T+ph}" x2="${W-R}" y2="${T+ph}"/>`;
+  G.years.forEach((y,i)=>{ s+=`<text x="${X(i)}" y="${T+ph+22}" text-anchor="middle" font-size="13">${y}</text>`; });
+  s+=`<text x="${L+pw/2}" y="${H-6}" text-anchor="middle" font-size="13" font-weight="700">Year</text>`;
+  s+=`<text transform="translate(16 ${T+ph/2}) rotate(-90)" text-anchor="middle" font-size="13" font-weight="700">${esc(G.yLabel)}</text>`;
+  G.series.forEach((se,k)=>{
+    const d=se.v.map((v,i)=>(i?'L':'M')+X(i)+' '+Y(v)).join(' ');
+    s+=`<path class="ln s${k}" d="${d}"/>`;
+    se.v.forEach((v,i)=>{ s+=marker(MARK[k],X(i),Y(v),'s'+k); s+=`<title>${esc(se.name)}, ${G.years[i]}: ${v}%</title>`; });
+  });
+  if(opts.vals){
+    // place value labels, nudging to avoid collisions in each column
+    G.years.forEach((yr,i)=>{
+      const pts=G.series.map((se,k)=>({k,y:Y(se.v[i]),v:se.v[i]})).sort((a,b)=>a.y-b.y);
+      let last=-99; pts.forEach(p=>{ let ly=p.y-9; if(ly<last+13) ly=last+13; last=ly;
+        const dx = i===0?10:(i===n-1?-10:0), anc=i===0?'start':(i===n-1?'end':'middle');
+        s+=`<text class="vl s${p.k}" x="${X(i)+dx}" y="${ly}" text-anchor="${anc}">${p.v}</text>`; });
+    });
+  }
+  return s+'</svg>';
+}
+function legendHTML(G){
+  return '<div class="legend">'+G.series.map((se,k)=>`<span><svg viewBox="0 0 30 14" aria-hidden="true"><line x1="0" x2="30" y1="7" y2="7" class="ln s${k}" style="stroke-width:3"/>${marker(MARK[k],15,7,'s'+k,4)}</svg>${esc(se.name)} <span class="ar">${se.ar}</span></span>`).join('')+'</div>';
+}
+function graphCard(G, small){
+  return `<div class="card gcard"><h3>${esc(G.title)}</h3><p class="task">${esc(G.task)}</p>
+    <div class="gwrap" data-g="${G.id}">${graphSVG(G,{vals:state.showVals})}</div>${legendHTML(G)}
+    <label class="toggle"><input type="checkbox" class="valtoggle" ${state.showVals?'checked':''}> Show the numbers on the graph</label></div>`;
+}
+function miniSVG(G,k,i0,i1){
+  const W=300,H=120,L=10,R=10,T=18,B=22,pw=W-L-R,ph=H-T-B,n=G.years.length;
+  const X=i=>L+i*(pw/(n-1)), Y=v=>T+ph-(v/G.max)*ph, v=G.series[k].v;
+  let s=`<svg class="mini gsvg" viewBox="0 0 ${W} ${H}" aria-label="${esc(G.series[k].name)} ${G.years[i0]} to ${G.years[i1]}">`;
+  s+=`<line class="axis" x1="${L}" x2="${W-R}" y1="${T+ph}" y2="${T+ph}"/>`;
+  s+=`<path class="ln s${k}" style="opacity:.25" d="${v.map((x,i)=>(i?'L':'M')+X(i)+' '+Y(x)).join(' ')}"/>`;
+  let seg=''; for(let i=i0;i<=i1;i++) seg+=(i===i0?'M':'L')+X(i)+' '+Y(v[i])+' ';
+  s+=`<path class="ln s${k}" style="stroke-width:5" d="${seg}"/>`;
+  [i0,i1].forEach(i=>{ s+=marker(MARK[k],X(i),Y(v[i]),'s'+k,5); s+=`<text class="vl s${k}" x="${X(i)}" y="${Y(v[i])-9}" text-anchor="middle" font-size="12">${v[i]}%</text>`; s+=`<text x="${X(i)}" y="${H-5}" text-anchor="middle" font-size="12" font-weight="700">${G.years[i]}</text>`; });
+  return s+'</svg>';
+}
+
+/* ===================== RENDER ===================== */
+function renderNav(){
+  $('#nav').innerHTML = STAGES.map(s=>`<button type="button" class="chip ${state.stage===s.id?'on':''} ${stageDone(s.id)?'done':''}" data-st="${s.id}" ${state.stage===s.id?'aria-current="step"':''}><span class="n">${stageDone(s.id)?'✓':s.n}</span>${s.short}</button>`).join('');
+}
+function intro(st, html){
+  const S=STAGES.find(s=>s.id===st);
+  return `<div class="intro"><span class="eyebrow">${S.id==='res'?'Finish':S.id==='go'?'Start here':'Stage '+S.n+' of 7'}</span><h2>${S.title}</h2><p class="ar">${S.ar}</p>${html}</div>`;
+}
+function renderAll(){
+  $('#main').innerHTML = [rGo(),r1(),r2(),r3(),r4(),r5(),r6(),r7(),rRes()].join('');
+  STAGES.forEach(s=>{ const el=document.getElementById('st-'+s.id); if(el) el.classList.toggle('on', s.id===state.stage); });
+  S1.forEach((_,i)=>updatePreview(i));
+  S5.forEach((_,i)=>drawTiles(i));
+  S6.forEach(p=>updateChecks6(p.k));
+  S4W.forEach((_,i)=>updateChecks4(i));
+  update7();
+  updateTop();
+  if(state.stage==='go') startAnim(); else stopAnim();
+}
+
+
+/* ---- Opening animation ---- */
+const PHR=[['rose sharply','ارتفع بشكل حاد'],['fell steadily','انخفض بثبات'],['fluctuated','تذبذب'],['overtook','تجاوز'],['a sharp drop','انخفاض حاد'],['grew rapidly','نما بسرعة'],['reached a peak of','بلغ الذروة']];
+const CAPS=[
+ [0,  -1,'<b>2004:</b> printed books are at the top with <em>72%</em>. E-books start at just 5%.'],
+ [0.9,-1,'Watch the e-books line. It begins to go up…'],
+ [1.7, 0,'E-books <em>rose sharply</em>, from 12% to 41% between 2008 and 2016.'],
+ [2.3, 1,'Meanwhile, printed books <em>fell steadily</em>.'],
+ [2.8, 2,'Library visits <em>fluctuated</em> between 30% and 35%.'],
+ [3.35,3,'Look! E-books <em>overtook</em> printed books between 2016 and 2020.'],
+ [3.8, 4,'There was <em>a sharp drop</em> in library visits, to 22% in 2020.'],
+ [4.25,5,'Audiobooks <em>grew rapidly</em>, from 10% to 33%.'],
+ [4.85,6,'By 2024, e-books <em>reached a peak of</em> 58%. What a change!']
+];
+const AN={raf:0,paused:false,elapsed:0,last:0,cap:-1,geo:null};
+const DRAW=11000, HOLD=3500;
+function rGo(){
+  return `<section class="stage" id="st-go">${intro('go',`<p>Watch how the four lines change from 2004 to 2024 and read the language that describes each change. You will use these phrases in every stage.</p><p class="ar">شاهد كيف تتغير الخطوط، واقرأ العبارات التي تصف كل تغيير.</p>`)}
+  <div class="card anim"><div class="anim-top"><div class="yr"><small>Year</small><span id="anYear">2004</span></div>
+    <div class="row" style="margin:0"><button class="btn ghost" type="button" data-act="anPause" id="anPause">Pause</button><button class="btn ghost" type="button" data-act="anReplay">Replay</button></div></div>
+    <div id="anSvg"></div>${legendHTML(GA)}
+    <div class="cap" id="anCap" aria-live="polite"></div>
+    <div class="phr">${PHR.map((p,i)=>`<span class="ph" id="ph${i}">${p[0]}<span class="ar">${p[1]}</span></span>`).join('')}</div>
+    <div class="row"><button class="btn" type="button" data-act="goS1">Start Stage 1 →</button></div></div></section>`;
+}
+function buildAnim(){
+  const box=$('#anSvg'); if(!box) return false;
+  const W=760,H=400,L=56,R=130,T=22,B=44,pw=W-L-R,ph=H-T-B,n=GA.years.length;
+  const X=i=>L+i*(pw/(n-1)), Y=v=>T+ph-(v/GA.max)*ph;
+  let s=`<svg class="gsvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Animated line graph of reading methods, 2004 to 2024">`;
+  for(let v=0;v<=GA.max;v+=GA.step) s+=`<line class="gl" x1="${L}" x2="${L+pw}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L-10}" y="${Y(v)+4}" text-anchor="end" font-size="13">${v}</text>`;
+  s+=`<line class="axis" x1="${L}" y1="${T}" x2="${L}" y2="${T+ph}"/><line class="axis" x1="${L}" y1="${T+ph}" x2="${L+pw}" y2="${T+ph}"/>`;
+  GA.years.forEach((y,i)=>s+=`<text x="${X(i)}" y="${T+ph+22}" text-anchor="middle" font-size="13">${y}</text>`);
+  s+=`<text transform="translate(14 ${T+ph/2}) rotate(-90)" text-anchor="middle" font-size="13" font-weight="700">% of students</text>`;
+  s+=`<line id="anCursor" class="gl" style="stroke:var(--sun);stroke-width:2;stroke-dasharray:4 4" x1="${L}" x2="${L}" y1="${T}" y2="${T+ph}"/>`;
+  const cx=3.4, cy=49-(49-40)*0.4;
+  s+=`<g id="anRing" style="display:none"><circle class="ring pulse" cx="${X(0)+cx*(pw/(n-1))}" cy="${Y(cy)}" r="12"/><circle class="ring" cx="${X(0)+cx*(pw/(n-1))}" cy="${Y(cy)}" r="12"/></g>`;
+  GA.series.forEach((se,k)=>{ s+=`<path id="anL${k}" class="ln s${k}" style="stroke-width:4" d=""/><g id="anH${k}">${marker(MARK[k],0,0,'s'+k,6)}</g><text id="anT${k}" class="hl s${k}" x="0" y="0"></text>`; });
+  box.innerHTML=s+'</svg>';
+  AN.geo={X,Y,L,pw,n};
+  return true;
+}
+function drawAnim(p){
+  const G=AN.geo; if(!G) return;
+  const heads=GA.series.map((se,k)=>{
+    const v=se.v, i=Math.floor(p), f=p-i; let d='';
+    for(let j=0;j<=i&&j<v.length;j++) d+=(j?'L':'M')+G.X(j)+' '+G.Y(v[j])+' ';
+    let hv=v[i]; if(i<v.length-1){ hv=v[i]+(v[i+1]-v[i])*f; d+='L'+(G.X(i)+f*(G.pw/(G.n-1)))+' '+G.Y(hv); }
+    const hx=G.X(0)+p*(G.pw/(G.n-1)), hy=G.Y(hv);
+    document.getElementById('anL'+k).setAttribute('d',d);
+    document.getElementById('anH'+k).setAttribute('transform',`translate(${hx} ${hy})`);
+    return {k,hx,hy,hv};
+  });
+  let last=-99; heads.slice().sort((a,b)=>a.hy-b.hy).forEach(h=>{ let ly=h.hy+4; if(ly<last+16) ly=last+16; last=ly;
+    const t=document.getElementById('anT'+h.k); t.setAttribute('x',h.hx+12); t.setAttribute('y',ly); t.textContent=`${GA.series[h.k].name} ${Math.round(h.hv)}%`; });
+  const cur=document.getElementById('anCursor'), hx=heads[0].hx; cur.setAttribute('x1',hx); cur.setAttribute('x2',hx);
+  document.getElementById('anRing').style.display=p>=3.4?'':'none';
+  $('#anYear').textContent=Math.round(2004+p*4);
+  let ci=0; CAPS.forEach((c,j)=>{ if(p>=c[0]) ci=j; });
+  if(ci!==AN.cap){ AN.cap=ci; const el=$('#anCap'), c=CAPS[ci];
+    el.style.opacity=0; setTimeout(()=>{ el.innerHTML=c[2]; el.style.opacity=1; },180);
+    PHR.forEach((_,j)=>{ const ph=document.getElementById('ph'+j); if(ph) ph.classList.toggle('lit', j===c[1]); });
+  }
+}
+function stopAnim(){ if(AN.raf) cancelAnimationFrame(AN.raf); AN.raf=0; }
+function startAnim(){
+  stopAnim(); if(!buildAnim()) return; AN.cap=-1;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){ drawAnim(5); return; }
+  AN.last=performance.now();
+  const loop=now=>{ if(!AN.paused) AN.elapsed+=Math.max(0,now-AN.last); AN.last=now;
+    if(AN.elapsed>DRAW+HOLD){ AN.elapsed=0; AN.cap=-1; }
+    drawAnim(Math.max(0,Math.min(5,AN.elapsed/DRAW*5))); AN.raf=requestAnimationFrame(loop); };
+  AN.raf=requestAnimationFrame(loop);
+}
+
+/* ---- Stage 1 ---- */
+function r1(){
+  const bank = BANK.map(([t,w,a])=>`<div class="word"><span class="tag ${t}">${t==='how'?'how big / fast':t==='up'?'goes up':'goes down'}</span><b>${w}</b><span class="ar">${a}</span></div>`).join('');
+  const items = S1.map((t,i)=>{
+    const se=GA.series[t.s], b=state.b[i]||{};
+    const yrOpts = sel=>['<option value="">year</option>'].concat(GA.years.map(y=>`<option ${String(sel)===String(y)?'selected':''}>${y}</option>`)).join('');
+    const opt=(arr,sel,ph)=>[`<option value="">${ph}</option>`].concat(arr.map(x=>`<option ${sel===x?'selected':''}>${x}</option>`)).join('');
+    let build;
+    if(t.p==='A'){
+      build=`<select data-i="${i}" data-f="subj" aria-label="Subject">${opt(SUBJ_A,b.subj,'choose the subject…')}</select>
+        <select data-i="${i}" data-f="verb" aria-label="Verb">${opt(VERBS.up.concat(VERBS.down),b.verb,'verb')}</select>
+        <select data-i="${i}" data-f="adv" aria-label="Adverb">${opt(ADVS,b.adv,'adverb')}</select>
+        <span>from</span><input type="number" min="0" max="100" data-i="${i}" data-f="from" value="${b.from??''}" aria-label="From figure"><span>% to</span>
+        <input type="number" min="0" max="100" data-i="${i}" data-f="to" value="${b.to??''}" aria-label="To figure"><span>% between</span>
+        <select data-i="${i}" data-f="y1" aria-label="First year">${yrOpts(b.y1)}</select><span>and</span><select data-i="${i}" data-f="y2" aria-label="Second year">${yrOpts(b.y2)}</select><span>.</span>`;
+    } else {
+      build=`<span>There was a</span><select data-i="${i}" data-f="adj" aria-label="Adjective">${opt(ADJS,b.adj,'adjective')}</select>
+        <select data-i="${i}" data-f="noun" aria-label="Noun">${opt(NOUNS.up.concat(NOUNS.down),b.noun,'noun')}</select>
+        <span>in the percentage of students</span><select data-i="${i}" data-f="subj" aria-label="Activity">${opt(ACT_B,b.subj,'activity…')}</select>
+        <span>, from</span><input type="number" min="0" max="100" data-i="${i}" data-f="from" value="${b.from??''}" aria-label="From figure"><span>% to</span>
+        <input type="number" min="0" max="100" data-i="${i}" data-f="to" value="${b.to??''}" aria-label="To figure"><span>% between</span>
+        <select data-i="${i}" data-f="y1" aria-label="First year">${yrOpts(b.y1)}</select><span>and</span><select data-i="${i}" data-f="y2" aria-label="Second year">${yrOpts(b.y2)}</select><span>.</span>`;
+    }
+    const ok=state.items['s1-'+i]!=null;
+    return `<div class="item ${ok?'ok':''}" id="s1i${i}"><h4><span class="qn">${i+1}</span> Pattern ${t.p==='A'?'1 · verb + adverb':'2 · There was a + adjective + noun'}</h4>
+      <p class="say">Describe the <b>${se.name.toLowerCase()}</b> line from <b>${GA.years[t.i0]}</b> to <b>${GA.years[t.i1]}</b>.</p>
+      ${miniSVG(GA,t.s,t.i0,t.i1)}
+      <div class="builder">${build}</div>
+      <div class="preview"><span class="lbl">Your sentence</span><span id="pv${i}"></span></div>
+      <div class="row"><button class="btn" type="button" data-act="chk1" data-i="${i}">Check my sentence</button></div>
+      <div class="fb" id="fb1-${i}"></div></div>`;
+  }).join('');
+  return `<section class="stage" id="st-s1">${intro('s1',`<p>Every Task 1 report is made of trend sentences. There are two main patterns. Learn both, because using both gives you <b>variety</b>, and examiners reward that.</p>
+    <div class="pattern"><em>Pattern 1:</em> Subject + <em>verb</em> + <em>adverb</em> + from X% to Y% + between [year] and [year].<br>The percentage of students using e-books <em>rose sharply</em> from 12% to 41% between 2008 and 2016.</div>
+    <div class="pattern"><em>Pattern 2:</em> There was a + <em>adjective</em> + <em>noun</em> + in + subject …<br>There was a <em>sharp rise</em> in the percentage of students using e-books …</div>
+    <p class="ar">النمط الأول: فعل + ظرف. النمط الثاني: There was a + صفة + اسم.</p>`)}
+    <div class="layout two"><div class="graphside">${graphCard(GA)}<div class="card" style="margin-top:14px"><h3 style="font-size:1rem;margin-bottom:8px">Word bank <span class="ar">بنك الكلمات</span></h3><div class="bank">${bank}</div></div></div>
+    <div class="stack">${items}</div></div></section>`;
+}
+function sentenceFor(i){
+  const t=S1[i], b=state.b[i]||{}; const g=(v,ph)=>v!==undefined&&v!==''?v:'___';
+  if(t.p==='A') return `${g(b.subj)} ${g(b.verb)} ${g(b.adv)} from ${g(b.from)}% to ${g(b.to)}% between ${g(b.y1)} and ${g(b.y2)}.`;
+  return `There was a ${g(b.adj)} ${g(b.noun)} in the percentage of students ${g(b.subj)}, from ${g(b.from)}% to ${g(b.to)}% between ${g(b.y1)} and ${g(b.y2)}.`;
+}
+function updatePreview(i){const el=$('#pv'+i); if(el) el.textContent=sentenceFor(i);}
+function check1(i){
+  const t=S1[i], b=state.b[i]||{}, v=GA.series[t.s].v, errs=[];
+  const subjOk = t.p==='A' ? b.subj===SUBJ_A[t.s] : b.subj===ACT_B[t.s];
+  if(!subjOk) errs.push('Check the subject: which line are you describing?');
+  if(t.p==='A'){
+    if(!b.verb) errs.push('Choose a verb.'); else if(!VERBS[t.dir].includes(b.verb)) errs.push(`Does this line go up or down? "${b.verb}" goes the wrong way.`);
+    if(!t.ok.includes(b.adv)) errs.push(`Think about the size of the change (${v[t.i0]}% → ${v[t.i1]}%). Is "${b.adv||'…'}" the right adverb?`);
+  } else {
+    if(!b.noun) errs.push('Choose a noun.'); else if(!NOUNS[t.dir].includes(b.noun)) errs.push(`Does this line go up or down? "${b.noun}" goes the wrong way.`);
+    if(!t.ok.includes(b.adj)) errs.push(`Think about the size of the change (${v[t.i0]}% → ${v[t.i1]}%). Is "${b.adj||'…'}" the right adjective?`);
+  }
+  if(Number(b.from)!==v[t.i0]||b.from===''||b.from==null) errs.push('Check the first figure on the graph.');
+  if(Number(b.to)!==v[t.i1]||b.to===''||b.to==null) errs.push('Check the second figure on the graph.');
+  if(String(b.y1)!==String(GA.years[t.i0])||String(b.y2)!==String(GA.years[t.i1])) errs.push('Check the years.');
+  const ok=!errs.length; record('s1-'+i, ok);
+  const fb=$('#fb1-'+i);
+  if(ok){ fb.className='fb good'; fb.innerHTML='<b>Excellent!</b> That is a Band 6 trend sentence. <span class="ar">ممتاز!</span>'; $('#s1i'+i).classList.add('ok'); }
+  else { fb.className='fb bad'; fb.innerHTML='<b>Not yet. Fix these:</b><ul>'+errs.map(e=>'<li>'+esc(e)+'</li>').join('')+'</ul>'; }
+}
+
+/* ---- Stage 2 ---- */
+function r2(){
+  const items=S2.map((q,i)=>{
+    const id='s2-'+i, sel=state.g2[i]||'', done=state.items[id]!=null;
+    const opts=['<option value="">…</option>'].concat(PREPS.map(p=>{const val=(q[0]===''?cap(p):p);return `<option value="${val}" ${sel===val?'selected':''}>${val}</option>`;})).join('');
+    return `<div class="item gap ${done?'ok':''}" id="s2i${i}"><p class="line"><span class="qn">${i+1}</span>&nbsp; ${esc(q[0])}<select data-g2="${i}" aria-label="Gap ${i+1}">${opts}</select>${esc(q[2])}</p><div class="fb" id="fb2-${i}"></div></div>`;
+  }).join('');
+  const tips=Object.entries(PREP_TIPS).map(([k,v])=>`<div class="word"><b>${k}</b><span style="font-size:.88rem">${esc(v)}</span></div>`).join('');
+  return `<section class="stage" id="st-s2">${intro('s2',`<p>Small words carry big meaning in Task 1. <b>from … to</b> gives the start and end, <b>by</b> gives the size of the change, <b>of</b> follows <i>a peak / a low</i>, and <b>at</b> follows <i>stood / remained</i>. Choose the right word for each gap.</p><p class="ar">انتبه إلى حروف الجر: from/to, by, at, of, in, between, over</p>`)}
+  <div class="layout two"><div class="graphside">${graphCard(GA)}<div class="card" style="margin-top:14px"><h3 style="font-size:1rem;margin-bottom:8px">Quick rules</h3><div class="bank">${tips}</div></div></div>
+  <div class="stack">${items}<div class="row"><button class="btn" type="button" data-act="chk2">Check my answers</button></div><div class="fb" id="fb2all"></div></div></div></section>`;
+}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function check2(){
+  let right=0, empty=0;
+  S2.forEach((q,i)=>{
+    const id='s2-'+i, v=state.g2[i]||'', box=$('#s2i'+i), fb=$('#fb2-'+i);
+    if(state.items[id]!=null){right++;return;}
+    if(!v){empty++;return;}
+    const ok=v.toLowerCase()===q[1].toLowerCase(); record(id,ok);
+    box.classList.toggle('ok',ok); box.classList.toggle('no',!ok);
+    if(ok){right++; fb.className='fb good'; fb.textContent='Correct.';}
+    else { fb.className='fb tip'; fb.textContent='Try again. Tip: '+(PREP_TIPS[q[1].toLowerCase()]||''); }
+  });
+  const all=$('#fb2all'); all.className='fb '+(right===S2.length?'good':'tip');
+  all.textContent = right===S2.length ? 'All 10 correct! Great work.' : `${right} of ${S2.length} correct${empty?` · ${empty} still empty`:''}. Fix the orange ones and check again.`;
+}
+
+/* ---- Stage 3 ---- */
+function r3(){
+  const items=S3.map((q,i)=>{
+    const id='s3-'+i, done=state.items[id]!=null;
+    return `<div class="item ${done?'ok':''}" id="s3i${i}"><h4><span class="qn">${i+1}</span> ${esc(q.ask)}</h4>
+      <p class="src">${esc(q.src)}</p>
+      <textarea id="t3-${i}" data-t="s3-${i}" rows="2" style="min-height:64px" aria-label="Your rewritten sentence">${esc(state.t['s3-'+i]||'')}</textarea>
+      <div class="row"><button class="btn" type="button" data-act="chk3" data-i="${i}">Check</button>${(state.tries[id]||0)>=2||done?`<button class="btn ghost" type="button" data-act="mod3" data-i="${i}">Show model</button>`:''}</div>
+      <div class="fb" id="fb3-${i}"></div><div id="md3-${i}"></div></div>`;
+  }).join('');
+  return `<section class="stage" id="st-s3">${intro('s3',`<p>Good writers change between a <b>verb</b> sentence and a <b>noun</b> sentence so they do not repeat themselves. Remember: the <b>adverb</b> (sharp<b>ly</b>) goes with the verb; the <b>adjective</b> (sharp) goes with the noun.</p>
+   <div class="pattern">rose sharp<em>ly</em> ⇄ a sharp <em>rise</em> · fell gradual<em>ly</em> ⇄ a gradual <em>fall</em> · grew steadi<em>ly</em> ⇄ a steady <em>rise</em></div>
+   <p class="ar">الفعل + ظرف ⇄ صفة + اسم</p>`)}
+   <div class="layout two"><div class="graphside">${graphCard(GA)}</div><div class="stack">${items}</div></div></section>`;
+}
+function check3(i){
+  const q=S3[i], txt=norm(state.t['s3-'+i]).replace(/[.]+$/,''), fb=$('#fb3-'+i);
+  if(!txt){fb.className='fb tip';fb.textContent='Write your sentence first.';return;}
+  const miss=q.g.filter(([re])=>!re.test(txt)).map(([,h])=>h);
+  const ok=!miss.length; record('s3-'+i, ok);
+  if(ok){fb.className='fb good';fb.innerHTML='<b>Well done!</b> Your sentence is correct.'; $('#s3i'+i).classList.add('ok'); showModel3(i);}
+  else {fb.className='fb bad';fb.innerHTML='<b>Almost. Check:</b><ul>'+[...new Set(miss)].map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul>';}
+  const row=$('#s3i'+i+' .row'); if(!row.querySelector('[data-act="mod3"]') && state.tries['s3-'+i]>=2){row.insertAdjacentHTML('beforeend',`<button class="btn ghost" type="button" data-act="mod3" data-i="${i}">Show model</button>`);}
+}
+function showModel3(i){$('#md3-'+i).innerHTML=`<div class="model"><b>Model:</b> ${esc(S3[i].model)}</div>`;}
+
+/* ---- Stage 4 ---- */
+function r4(){
+  const lk=LINKERS.map(([t,w,a])=>`<div class="word"><span class="tag ${t==='contrast'?'down':'up'}">${t==='contrast'?'different':'same'}</span><b>${w}</b><span class="ar">${a}</span></div>`).join('');
+  const mc=S4.map((q,i)=>{
+    const id='s4-'+i, done=state.items[id]!=null, opts=getOrder('s4o'+i,q.opts);
+    return `<div class="item ${done?'ok':''}" id="s4i${i}"><h4><span class="qn">${i+1}</span> Choose the best linking word.</h4>
+      <p class="say">${esc(q.pre)}<b style="color:var(--aqua)">______</b>${esc(q.post)}</p>
+      <div class="opts">${opts.map(o=>`<button type="button" class="opt ${done&&o===q.ans?'right':''}" data-act="mc4" data-i="${i}" data-o="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+      <div class="fb ${done?'good':''}" id="fb4-${i}">${done?esc(q.why):''}</div></div>`;
+  }).join('');
+  const wr=S4W.map((q,i)=>`<div class="item ${state.items['s4-w'+i]!=null?'ok':''}" id="s4w${i}"><h4><span class="qn">${S4.length+i+1}</span> Your turn to write</h4><p class="say">${esc(q.ask)}</p>
+      <textarea data-t="s4w-${i}" aria-label="Your sentence">${esc(state.t['s4w-'+i]||'')}</textarea>
+      <ul class="checks" id="ck4-${i}"></ul><div id="md4-${i}"></div></div>`).join('');
+  return `<section class="stage" id="st-s4">${intro('s4',`<p>A Band 6 report does not describe each line alone. It <b>compares</b> them. Use a <b>contrast</b> word when lines move in different ways, and a <b>similarity</b> word when they move the same way.</p>
+   <div class="pattern">E-books rose sharply, <em>whereas</em> printed books fell. · E-books rose. <em>Similarly</em>, audiobooks grew.</div><p class="ar">استخدم أدوات الربط للمقارنة: whereas، in contrast، similarly</p>`)}
+   <div class="layout two"><div class="graphside">${graphCard(GA)}<div class="card" style="margin-top:14px"><h3 style="font-size:1rem;margin-bottom:8px">Linking words <span class="ar">أدوات الربط</span></h3><div class="bank">${lk}</div></div></div>
+   <div class="stack">${mc}${wr}</div></div></section>`;
+}
+function mc4(i,o,btn){
+  const q=S4[i], id='s4-'+i; if(state.items[id]!=null) return;
+  const ok=o===q.ans; record(id,ok); const fb=$('#fb4-'+i);
+  if(ok){btn.classList.add('right'); fb.className='fb good'; fb.textContent=q.why; $('#s4i'+i).classList.add('ok');}
+  else {btn.classList.add('wrong'); fb.className='fb bad'; fb.textContent='Not this one. Do the two lines move the same way or differently?';}
+}
+function updateChecks4(i){
+  const q=S4W[i], t=norm(state.t['s4w-'+i]); const ul=$('#ck4-'+i); if(!ul) return;
+  const res=q.checks.map(([l,re])=>[l,re.test(t)]);
+  ul.innerHTML=res.map(([l,y])=>`<li class="${y?'yes':''}"><span class="d">${y?'✓':''}</span>${esc(l)}</li>`).join('');
+  const all=res.every(r=>r[1]);
+  if(all){ if(state.items['s4-w'+i]==null){ state.tries['s4-w'+i]=1; record('s4-w'+i,true); } $('#s4w'+i).classList.add('ok'); $('#md4-'+i).innerHTML=`<div class="model"><b>One possible answer:</b> ${esc(q.model)}</div>`; }
+}
+
+/* ---- Stage 5 ---- */
+function r5(){
+  const items=S5.map((q,i)=>{const done=state.items['s5-'+i]!=null;
+    return `<div class="item ${done?'ok':''}" id="s5i${i}"><h4><span class="qn">${i+1}</span> Put the words in order. <span class="wc">Key phrase: <b>${esc(q.tip)}</b> · <span class="ar">${q.ar}</span></span></h4>
+    <div class="answer-zone" id="az${i}" aria-label="Your sentence"></div><div class="pool" id="pl${i}"></div>
+    <div class="row"><button class="btn" type="button" data-act="chk5" data-i="${i}">Check</button><button class="btn ghost" type="button" data-act="rst5" data-i="${i}">Start again</button></div>
+    <div class="fb" id="fb5-${i}"></div></div>`;}).join('');
+  return `<section class="stage" id="st-s5">${intro('s5',`<p>The best reports point out the <b>key features</b>: the highest point, the lowest point, where one line <b>overtakes</b> another, and lines that go up and down. Tap the word blocks to build each sentence. Tap a block in the box to send it back.</p><p class="ar">اضغط على الكلمات لترتيب الجملة</p>`)}
+  <div class="layout two"><div class="graphside">${graphCard(GA)}</div><div class="stack">${items}</div></div></section>`;
+}
+function drawTiles(i){
+  const q=S5[i], st=state.s5[i]||(state.s5[i]={placed:[]}); const done=state.items['s5-'+i]!=null;
+  const order=getOrder('s5o'+i, q.c.map((_,k)=>k));
+  const az=$('#az'+i), pl=$('#pl'+i); if(!az) return;
+  const placed = done? q.c.map((_,k)=>k) : st.placed;
+  az.innerHTML=placed.map((k,pos)=>`<button type="button" class="tile" data-act="un5" data-i="${i}" data-pos="${pos}" ${done?'disabled':''}>${esc(q.c[k])}</button>`).join('');
+  pl.innerHTML=order.filter(k=>!placed.includes(k)).map(k=>`<button type="button" class="tile" data-act="pl5" data-i="${i}" data-k="${k}">${esc(q.c[k])}</button>`).join('');
+}
+function check5(i){
+  const q=S5[i], st=state.s5[i]||{placed:[]}, fb=$('#fb5-'+i);
+  if(st.placed.length<q.c.length){fb.className='fb tip';fb.textContent='Use all the word blocks first.';return;}
+  const ok=st.placed.every((k,pos)=>q.c[k]===q.c[pos]); record('s5-'+i,ok);
+  if(ok){fb.className='fb good';fb.textContent='Perfect: '+q.c.join(' '); $('#s5i'+i).classList.add('ok'); drawTiles(i);}
+  else {fb.className='fb bad';fb.textContent='Not quite. Start with the block that has a capital letter, and end with the block that has a full stop.';}
+}
+
+/* ---- Stage 6 ---- */
+function r6(){
+  const boxes=S6.map(p=>{const shown=state.h[p.k]||0;
+    return `<div class="item" id="s6-${p.k}"><div class="para-label"><h4>${esc(p.label)} <span class="ar">${p.ar}</span></h4><span class="wc" id="wc6-${p.k}">0 words</span></div>
+    <textarea data-t="s6-${p.k}" aria-label="${esc(p.label)}">${esc(state.t['s6-'+p.k]||'')}</textarea>
+    <ul class="checks" id="ck6-${p.k}"></ul>
+    <div class="hints" id="hn6-${p.k}">${p.hints.slice(0,shown).map((h,j)=>`<div class="hint"><b>Hint ${j+1}:</b> ${esc(h)}</div>`).join('')}</div>
+    <div class="row"><button class="btn sun" type="button" data-act="hint6" data-k="${p.k}" ${shown>=p.hints.length?'disabled':''}>${shown>=p.hints.length?'No more hints':'Show a hint ('+(p.hints.length-shown)+' left)'}</button></div></div>`;}).join('');
+  return `<section class="stage" id="st-s6">${intro('s6',`<p>Now put your sentences together. A Task 1 report has <b>four paragraphs</b>: introduction, overview, and two body paragraphs. This is a <b>new graph</b> about what graduates did after college, so write every sentence yourself. Use the hints if you get stuck. The model answer opens when every paragraph is long enough.</p><p class="ar">رسم بياني جديد: اكتب أربع فقرات بنفسك. استخدم التلميحات عند الحاجة.</p>`)}
+  <div class="layout two"><div class="graphside">${graphCard(GC)}</div><div class="stack">${boxes}
+  <div class="card"><div class="row" style="margin-top:0"><button class="btn" type="button" data-act="model6" id="m6btn">Compare with a model answer</button><span class="wc" id="m6note"></span></div><div id="m6"></div></div></div></div></section>`;
+}
+function updateChecks6(k){
+  const p=S6.find(x=>x.k===k), raw=state.t['s6-'+k]||'', t=norm(raw);
+  const ul=$('#ck6-'+k); if(!ul) return;
+  ul.innerHTML=p.checks.map(([l,f])=>{const y=f(t);return `<li class="${y?'yes':''}"><span class="d">${y?'✓':''}</span>${esc(l)}</li>`;}).join('');
+  $('#wc6-'+k).textContent=wc(raw)+' words';
+  const ready=s6done(), b=$('#m6btn'); if(b){ b.disabled=!ready; $('#m6note').textContent=ready?'':'Write all four paragraphs first (intro & overview 20+ words, body paragraphs 40+).'; }
+  if(state.model6 && ready) showModel6();
+}
+function showModel6(){ state.model6=true; $('#m6').innerHTML=`<div class="model" style="margin-top:10px"><b>Model answer (about ${wc(MODEL_C.join(' '))} words)</b>${MODEL_C.map((p,j)=>`<p style="margin:8px 0"><b>${['Introduction','Overview','Body 1','Body 2'][j]}:</b> ${esc(p)}</p>`).join('')}<p style="margin:6px 0 0">Compare: Did you group the two big lines and the two small lines? Did you use both sentence patterns and say when further study overtook finding work?</p></div>`; }
+
+/* ---- Stage 7 ---- */
+function r7(){
+  return `<section class="stage" id="st-s7">${intro('s7',`<p>This is a <b>new graph</b>. Use everything you practised: both sentence patterns, correct prepositions, comparisons and key features. Aim for <b>at least 150 words</b> in <b>20 minutes</b>. The model answer opens after you finish.</p><p class="ar">رسم بياني جديد: اكتب 150 كلمة على الأقل في 20 دقيقة.</p>`)}
+  <div class="layout two"><div class="graphside">${graphCard(GB)}<div class="card" style="margin-top:14px"><div class="row" style="margin-top:0;justify-content:space-between"><span class="timer" id="timer">20:00</span><span><button class="btn" type="button" data-act="tstart" id="tbtn">Start timer</button> <button class="btn ghost" type="button" data-act="treset">Reset</button></span></div></div></div>
+  <div class="stack"><div class="item"><div class="para-label"><h4>Your report <span class="ar">تقريرك</span></h4><span class="wc" id="wc7">0 words</span></div>
+    <textarea class="big" data-t="s7" aria-label="Your full report" placeholder="The line graph compares…">${esc(state.t['s7']||'')}</textarea></div>
+    <div class="item selfcheck"><h4>Check your own work <span class="ar">راجع عملك</span></h4>${SELF7.map((s,j)=>`<label><input type="checkbox" data-ck7="${j}" ${state.ck7[j]?'checked':''}> ${esc(s)}</label>`).join('')}</div>
+    <div class="card"><div class="row" style="margin-top:0"><button class="btn" type="button" data-act="fin7" id="fin7">I've finished: show the model</button><span class="wc" id="fin7note"></span></div><div id="m7"></div></div>
+  </div></div></section>`;
+}
+function update7(){
+  const n=wc(state.t['s7']); const w=$('#wc7'); if(!w) return;
+  w.textContent=n+' words'+(n>=150?' ✓':' / 150'); w.style.color=n>=150?'var(--good)':'';
+  const b=$('#fin7'); b.disabled=n<100 && !state.fin7; $('#fin7note').textContent=state.fin7?'Finished.':(n<100?'Write at least 100 words first.':'');
+  if(state.fin7) showModel7();
+  drawTimer();
+}
+function showModel7(){ $('#m7').innerHTML=`<div class="model" style="margin-top:10px"><b>Model answer (about 200 words)</b>${MODEL_B.map(p=>`<p style="margin:8px 0">${esc(p)}</p>`).join('')}</div>`; }
+let tick=null;
+function drawTimer(){const el=$('#timer'); if(!el) return; const m=Math.floor(state.timeLeft/60), s=state.timeLeft%60; el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; el.classList.toggle('low',state.timeLeft<=120);}
+function toggleTimer(){
+  const b=$('#tbtn');
+  if(tick){clearInterval(tick);tick=null;b.textContent='Resume timer';return;}
+  if(state.timeLeft<=0) state.timeLeft=1200;
+  b.textContent='Pause timer';
+  tick=setInterval(()=>{state.timeLeft--;drawTimer(); if(state.timeLeft<=0){clearInterval(tick);tick=null;b.textContent='Start timer';toast('Time is up! Finish your last sentence.');}},1000);
+}
+
+/* ---- Results ---- */
+function rRes(){
+  const T=totals(), certOk=T.pct>=80 && s6done() && state.fin7;
+  const sc=['s1','s2','s3','s4','s5'].map(st=>{const r=stageScore(st),S=STAGES.find(x=>x.id===st);return `<div class="score"><b>${Math.round(r.s/r.max*100)}%</b><span>Stage ${S.n} · ${S.short}</span></div>`;}).join('')
+    +`<div class="score"><b>${s6done()?'Done':'—'}</b><span>Stage 6 · Paragraphs</span></div><div class="score"><b>${state.fin7?'Done':'—'}</b><span>Stage 7 · Full report</span></div>`;
+  return `<section class="stage" id="st-res">${intro('res',`<p>Your score for Stages 1–5 is <b>${T.pct}%</b>. To unlock the certificate you need <b>80% or more</b> and must finish Stages 6 and 7. First-try answers score full marks; second tries score half.</p>`)}
+   <div class="stack"><div class="card"><div class="scores">${sc}</div></div>
+   <div class="card"><label for="nameIn"><b>Your name for the certificate</b></label><br><input class="name-in" id="nameIn" value="${esc(state.name)}" placeholder="Type your full name"></div>
+   <div class="cert ${certOk?'':'locked'}"><span class="eyebrow">Certificate of achievement</span><h2>Line Graph Sentence Studio</h2><p>This certifies that</p><div class="who" id="certName">${esc(state.name||'Your name')}</div>
+     <p>has completed all seven stages of IELTS Writing Task 1 line-graph sentence practice<br>with a score of <b>${T.pct}%</b>.</p><p class="wc">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})} · Designed by: Nazila Motahari</p>
+     ${certOk?`<div class="row" style="justify-content:center"><button class="btn" type="button" data-act="printcert">Print / save certificate</button></div>`:`<p><b>Locked.</b> ${T.pct<80?`Reach 80% in Stages 1–5 (now ${T.pct}%). `:''}${!s6done()?'Finish Stage 6. ':''}${!state.fin7?'Finish Stage 7.':''}</p>`}
+   </div></div></section>`;
+}
+
+/* ===================== EVENTS ===================== */
+document.addEventListener('click',e=>{
+  const chip=e.target.closest('.chip'); if(chip){ go(chip.dataset.st); return; }
+  const b=e.target.closest('[data-act]'); if(!b) return; const i=+b.dataset.i, a=b.dataset.act;
+  if(a==='chk1') check1(i);
+  else if(a==='chk2') check2();
+  else if(a==='chk3') check3(i);
+  else if(a==='mod3') showModel3(i);
+  else if(a==='mc4') mc4(i,b.dataset.o,b);
+  else if(a==='pl5'){ if(state.items['s5-'+i]!=null)return; (state.s5[i]||(state.s5[i]={placed:[]})).placed.push(+b.dataset.k); drawTiles(i); $('#fb5-'+i).textContent=''; $('#fb5-'+i).className='fb'; }
+  else if(a==='un5'){ state.s5[i].placed.splice(+b.dataset.pos,1); drawTiles(i); }
+  else if(a==='rst5'){ if(state.items['s5-'+i]!=null)return; state.s5[i]={placed:[]}; drawTiles(i); }
+  else if(a==='hint6'){ const k=b.dataset.k, p=S6.find(x=>x.k===k); state.h[k]=Math.min((state.h[k]||0)+1,p.hints.length); const shown=state.h[k];
+     $('#hn6-'+k).innerHTML=p.hints.slice(0,shown).map((h,j)=>`<div class="hint"><b>Hint ${j+1}:</b> ${esc(h)}</div>`).join('');
+     b.disabled=shown>=p.hints.length; b.textContent=shown>=p.hints.length?'No more hints':'Show a hint ('+(p.hints.length-shown)+' left)'; }
+  else if(a==='model6'){ if(s6done()){ showModel6(); updateTop(); } }
+  else if(a==='tstart') toggleTimer();
+  else if(a==='treset'){ if(tick){clearInterval(tick);tick=null;} state.timeLeft=1200; $('#tbtn').textContent='Start timer'; drawTimer(); }
+  else if(a==='fin7'){ if(wc(state.t['s7'])<100)return; if(!state.fin7){state.fin7=true; if(tick){clearInterval(tick);tick=null;$('#tbtn').textContent='Start timer';} confetti(); toast('Report finished! +60 points');} update7(); updateTop(); }
+  else if(a==='printcert') printCert();
+  else if(a==='anPause'){ AN.paused=!AN.paused; b.textContent=AN.paused?'Play':'Pause'; }
+  else if(a==='anReplay'){ AN.elapsed=0; AN.cap=-1; if(AN.paused){AN.paused=false; const pb=$('#anPause'); if(pb) pb.textContent='Pause';} if(!AN.raf) startAnim(); }
+  else if(a==='goS1') go('s1');
+});
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.matches('.builder [data-f]')){ const i=+t.dataset.i; (state.b[i]||(state.b[i]={}))[t.dataset.f]=t.value; updatePreview(i); }
+  else if(t.matches('[data-g2]')){ state.g2[+t.dataset.g2]=t.value; }
+  else if(t.matches('[data-ck7]')){ state.ck7[+t.dataset.ck7]=t.checked; }
+  else if(t.matches('.valtoggle')){ state.showVals=t.checked; document.querySelectorAll('.gwrap').forEach(w=>{w.innerHTML=graphSVG(GRAPHS[w.dataset.g],{vals:state.showVals});}); document.querySelectorAll('.valtoggle').forEach(c=>c.checked=state.showVals); }
+});
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t.matches('.builder input[data-f]')){ const i=+t.dataset.i; (state.b[i]||(state.b[i]={}))[t.dataset.f]=t.value; updatePreview(i); }
+  else if(t.matches('[data-t]')){ const k=t.dataset.t; state.t[k]=t.value;
+    if(k.startsWith('s6-')) { updateChecks6(k.slice(3)); updateTop(); }
+    else if(k.startsWith('s4w-')) updateChecks4(+k.slice(4));
+    else if(k==='s7') update7(); }
+  else if(t.id==='nameIn'){ state.name=t.value; const c=$('#certName'); if(c) c.textContent=t.value||'Your name'; }
+});
+function go(st){
+  state.stage=st; stopAnim();
+  if(st==='res'){ const el=$('#st-res'); el.outerHTML=rRes(); }
+  STAGES.forEach(s=>document.getElementById('st-'+s.id).classList.toggle('on',s.id===st));
+  renderNav(); window.scrollTo({top:0,behavior:'smooth'});
+  if(st==='go') startAnim();
+}
+
+/* ---- Save / load ---- */
+$('#saveJson').onclick=()=>{
+  const data=JSON.stringify({app:'line-graph-sentence-studio',saved:new Date().toISOString(),state},null,1);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download='line-graph-studio-'+(state.name||'progress').replace(/[^a-z0-9]+/gi,'-').toLowerCase()+'.json';
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500); toast('Progress saved as a file.');
+};
+$('#loadJson').onclick=()=>$('#fileIn').click();
+$('#fileIn').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ try{ const d=JSON.parse(r.result); if(!d.state||d.app!=='line-graph-sentence-studio') throw 0; state=Object.assign(freshState(),d.state); if(tick){clearInterval(tick);tick=null;} renderAll(); toast('Progress loaded. Welcome back!'); }catch(err){ toast('This file is not a Line Graph Sentence Studio save file.'); } };
+  r.readAsText(f); e.target.value='';
+};
+
+/* ---- PDF (print) ---- */
+$('#pdfBtn').onclick=()=>{
+  const T=totals(), P=$('#printArea');
+  const p=t=>`<div class="p">${esc(t||'(not written)')}</div>`;
+  P.innerHTML=`<h1>Line Graph Sentence Studio: My Work</h1><p><b>Name:</b> ${esc(state.name||'—')} &nbsp; <b>Date:</b> ${new Date().toLocaleDateString('en-GB')} &nbsp; <b>Score (Stages 1–5):</b> ${T.pct}%</p>
+   <h2>Stage 1 · My trend sentences</h2>${S1.map((_,i)=>`<p>${i+1}. ${esc(sentenceFor(i))} ${state.items['s1-'+i]!=null?'✓':''}</p>`).join('')}
+   <h2>Stage 3 · Verb ⇄ noun</h2>${S3.map((q,i)=>`<p>${i+1}. <i>${esc(q.src)}</i><br>→ ${esc(state.t['s3-'+i]||'—')}</p>`).join('')}
+   <h2>Stage 4 · My comparison sentences</h2>${S4W.map((q,i)=>p(state.t['s4w-'+i])).join('')}
+   <h2>Stage 6 · My report on graduates after college</h2>${S6.map(x=>`<p><b>${esc(x.label)}</b></p>${p(state.t['s6-'+x.k])}`).join('')}
+   <h2>Stage 7 · My full report on payment methods</h2><p>${wc(state.t['s7'])} words</p>${p(state.t['s7'])}
+   ${state.fin7?`<h2>Model answer for Stage 7</h2>${MODEL_B.map(x=>`<p>${esc(x)}</p>`).join('')}`:''}
+   <p style="margin-top:20pt;font-size:10pt">Designed by: Nazila Motahari</p>`;
+  toast('Choose "Save as PDF" in the print window.'); setTimeout(()=>window.print(),300);
+};
+function printCert(){
+  const T=totals();
+  $('#printArea').innerHTML=`<div class="pcert"><p style="letter-spacing:.2em;text-transform:uppercase">Certificate of achievement</p><h1>Line Graph Sentence Studio</h1><p>This certifies that</p><h1 style="color:#5b3fc4">${esc(state.name||'')}</h1><p>has completed all seven stages of IELTS Writing Task 1 line-graph sentence practice with a score of <b>${T.pct}%</b>.</p><p>${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p><p>Designed by: Nazila Motahari</p></div>`;
+  setTimeout(()=>window.print(),200);
+}
+
+/* ---- Confetti ---- */
+function confetti(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c=$('#confetti'),x=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
+  const cols=['#5b3fc4','#d99400','#b0413e','#2e8b57','#a793ff','#ffc23d'];
+  const ps=Array.from({length:140},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.4,w:6+Math.random()*6,h:8+Math.random()*8,vy:2+Math.random()*3,vx:-1.5+Math.random()*3,r:Math.random()*6,vr:-.2+Math.random()*.4,col:cols[Math.floor(Math.random()*cols.length)]}));
+  let f=0; (function step(){ x.clearRect(0,0,c.width,c.height); ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.r+=p.vr;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.col;x.fillRect(-p.w/2,-p.h/2,p.w,p.h);x.restore();}); if(++f<160) requestAnimationFrame(step); else x.clearRect(0,0,c.width,c.height); })();
+}
+
+renderAll();
+</script>
+</body>
+</html>
